@@ -1,0 +1,9 @@
+pytest
+codecov
+pytest-cov
+mypy
+sphinx
+numpy
+scipy
+wheel
+flake8

@@ -1,0 +1,11 @@
+.coverage
+result
+__pycache__
+coverage.xml
+htmlcov
+*,cover
+MANIFEST
+build
+dist
+steinbit.egg-info
+

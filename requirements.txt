@@ -7,3 +7,7 @@ numpy
 scipy
 wheel
 flake8
+pandas
+pillow>=7.0.0
+tqdm
+scikit-learn

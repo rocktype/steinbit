@@ -8,7 +8,7 @@ setup(
   description='Mineralogical data processing library',
   author='Rocktype',
   author_email='henrik@rocktype.com',
-  url='https://github.com/Rocktype/rocktype',
+  url='https://github.com/Rocktype/steinbit',
   keywords=['steinbit', 'qemscan'],
   classifiers=[]
 )

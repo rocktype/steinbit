@@ -25,7 +25,11 @@ buildPythonPackage rec {
   propagatedBuildInputs = [
     numpy
     pytest
+    pandas
     scipy
+    scikitlearn
     wheel
+    pillow
+    tqdm
   ];
 }

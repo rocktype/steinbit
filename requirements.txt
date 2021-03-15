@@ -8,6 +8,6 @@ scipy
 wheel
 flake8
 pandas
-pillow
+pillow>=7.0.0
 tqdm
 scikit-learn

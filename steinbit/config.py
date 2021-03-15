@@ -4,11 +4,11 @@
 The configuration file
 """
 
-from .core import ColourMapping
+from .core import ColourMapping, Field
 
 import os
 import configparser
-from typing import Optional
+from typing import Optional, Dict
 import pandas as pd
 
 
@@ -30,6 +30,7 @@ class Config:
     detailed_mapping: ColourMapping
     reduced_mapping: ColourMapping
     translation: pd.DataFrame
+    fields: Dict[str, Field]
 
     @classmethod
     def search_config(cls):
@@ -67,6 +68,10 @@ class Config:
         self.detailed_mapping = ColourMapping(pd.read_csv(detailed_mapping))
         self.reduced_mapping = ColourMapping(pd.read_csv(reduced_mapping))
         self.translation = pd.read_csv(translation)
+
+        self.fields = {
+                k: Field(f, config['Regexes'].get(k, '(.*)'))
+                for k, f in config['Fields'].items()}
 
         trns = self.translation
         detailed_list = set(trns[trns.columns[1]])

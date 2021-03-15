@@ -5,9 +5,10 @@ The traits module supplies type information for common
 types and formats
 """
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Pattern, Optional
 import numpy as np
 import pandas as pd
+import re
 from PIL import ImageColor
 
 
@@ -60,3 +61,35 @@ class ColourMapping:
         else:
             raise TypeError("Mapping must be an (N,2) or (N,4) array")
         self.minerals = list(mapping[cols[0]])
+
+
+class Field:
+    """
+    Represents a metadata field
+
+    A field of the form:
+    <exif, regex>
+    extracts the item named 'exif' from the image metadata
+    and applies the given regex
+    """
+
+    exif: str
+    regex: Pattern
+
+    def __init__(self, exif: str, regex: Optional[str] = None):
+        """
+        Construct a field from an exif metadata item and a regex
+        """
+        self.exif = exif
+        self.regex = re.compile(regex) if regex else re.compile('(.*)')
+
+    def extract(self, metadata: Dict[str, str]) -> Optional[str]:
+        """
+        Extract this field from the metadata
+        """
+        if self.exif not in metadata:
+            return None
+        match = self.regex.match(metadata[self.exif])
+        if not match:
+            return None
+        return match.group(1)

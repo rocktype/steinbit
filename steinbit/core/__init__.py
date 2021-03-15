@@ -1,2 +1,2 @@
-from .transformer import Transformation
-from .types import ColourMapping
+from .imagedataextractor import ImageDataExtractor
+from .types import ColourMapping, Field

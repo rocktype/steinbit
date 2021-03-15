@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-from .core import Transformation
+from .core import ImageDataExtractor
 from .config import Config
 
-import os
 import argparse
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 import pandas as pd
 from PIL import Image
 from tqdm import tqdm
@@ -32,16 +31,21 @@ class Steinbit:
         pd.DataFrame
             A table mapping images to their compositions
         """
-        transformation = Transformation(self.config.detailed_mapping)
+        extractor = ImageDataExtractor(
+            self.config.detailed_mapping,
+            self.config.fields)
         result = pd.DataFrame()
         errors = []
         for image in tqdm(images, desc="Processing images"):
             image_data = Image.open(image)
-            error, counts = transformation.composition(image_data)
+            error, counts = extractor.composition(image_data)
             errors.append(error)
-            result = result.append(counts, ignore_index=True)
-        result['Filename'] = [os.path.basename(i) for i in images]
-        result['Error'] = errors
+            fields = extractor.metadata(image_data)
+
+            row: Dict[str, Any] = {}
+            row.update(counts)
+            row.update(fields)
+            result = result.append(row, ignore_index=True)
         cols = result.columns.to_list()
         return result[cols[-2:] + cols[:-2]]
 

@@ -55,7 +55,7 @@ class Config:
         config = configparser.ConfigParser()
         if filename:
             config.read(filename)
-        section = config['DEFAULT']
+        section = config['Mapping']
         detailed_mapping = section.get(
             'DetailedMapping',
             os.path.join(MODULEPATH, 'data/bls.csv'))

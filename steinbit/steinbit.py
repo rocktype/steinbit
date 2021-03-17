@@ -8,6 +8,7 @@ from typing import Optional, List, Dict, Any
 import pandas as pd
 from PIL import Image
 from tqdm import tqdm
+import magic
 
 
 class Steinbit:
@@ -17,35 +18,40 @@ class Steinbit:
     def __init__(self, configfile: Optional[str] = None):
         self.config = Config(configfile)
 
-    def process_images(self, images: List[str]) -> pd.DataFrame:
+    def process_files(self, files: List[str]) -> pd.DataFrame:
         """
-        Process a list of images and print out a CSV
+        Process a list of images or CSVs and print out a combined CSV
 
         Parameters
         ----------
-        images: List[str]
-            A list of image filenames to process
+        files: List[str]
+            A list of filenames to process
 
         Returns
         -------
         pd.DataFrame
-            A table mapping images to their compositions
+            A table mapping well depths to their compositions
         """
         extractor = ImageDataExtractor(
             self.config.detailed_mapping,
             self.config.fields)
         result = pd.DataFrame()
         errors = []
-        for image in tqdm(images, desc="Processing images"):
-            image_data = Image.open(image)
-            error, counts = extractor.composition(image_data)
-            errors.append(error)
-            fields = extractor.metadata(image_data)
+        for filepath in tqdm(files, desc="Processing files"):
+            mime = magic.detect_from_filename(filepath).mime_type
+            if not mime.startswith('image'):
+                frame = pd.read_csv(filepath)
+                result = result.append(frame)
+            else:
+                image_data = Image.open(filepath)
+                error, counts = extractor.composition(image_data)
+                errors.append(error)
+                fields = extractor.metadata(image_data)
 
-            row: Dict[str, Any] = {}
-            row.update(counts)
-            row.update(fields)
-            result = result.append(row, ignore_index=True)
+                row: Dict[str, Any] = {}
+                row.update(counts)
+                row.update(fields)
+                result = result.append(row, ignore_index=True)
         cols = result.columns.to_list()
         return result[cols[-2:] + cols[:-2]]
 
@@ -115,11 +121,11 @@ class Steinbit:
             '-p', '--percent', action='store_true',
             help='Write percentages rather than raw pixel counts')
         parser.add_argument(
-            'images', type=str, nargs='+',
-            help='images to parse')
+            'files', type=str, nargs='+',
+            help='images or csv files to parse')
         args = parser.parse_args()
         steinbit = Steinbit(configfile=args.config)
-        result = steinbit.process_images(args.images)
+        result = steinbit.process_files(args.files)
         if args.translate:
             result = steinbit.translate(result)
         if args.percent:

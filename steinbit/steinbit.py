@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-from .core import ImageDataExtractor
+from .core import ImageDataExtractor, Frame
 from .config import Config
 
 import argparse
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 import pandas as pd
 from PIL import Image
 from tqdm import tqdm
@@ -29,58 +29,21 @@ class Steinbit:
 
         Returns
         -------
-        pd.DataFrame
-            A table mapping well depths to their compositions
+        Frame
+            A table mapping well depths to their compositions for
+            each extractor used (detailed or reduced)
         """
-        extractor = ImageDataExtractor(
-            self.config.detailed_mapping,
-            self.config.fields)
-        result = pd.DataFrame()
-        errors = []
+        cfg = self.config
+        result = Frame([
+                ImageDataExtractor(cfg.detailed_mapping, cfg.fields),
+                ImageDataExtractor(cfg.reduced_mapping, cfg.fields)
+            ])
         for filepath in tqdm(files, desc="Processing files"):
             mime = magic.detect_from_filename(filepath).mime_type
             if not mime.startswith('image'):
-                frame = pd.read_csv(filepath)
-                result = result.append(frame)
+                result.append_frame(pd.read_csv(filepath))
             else:
-                image_data = Image.open(filepath)
-                error, counts = extractor.composition(image_data)
-                errors.append(error)
-                fields = extractor.metadata(image_data)
-
-                row: Dict[str, Any] = {}
-                row.update(counts)
-                row.update(fields)
-                result = result.append(row, ignore_index=True)
-        cols = result.columns.to_list()
-        return result[cols[-2:] + cols[:-2]]
-
-    def translate(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Reduce the supplied dataframe using the translation matrix
-
-        Parameters
-        ----------
-        df: pd.DataFrame
-            A dataframe of filenames, their composition and their RMS error
-
-        Returns
-        -------
-        pd.DataFrame
-            A dataframe calculated by mapping the minerals to a reduced set
-        """
-        trns = self.config.translation
-        grouped = trns.groupby(by=trns.columns[0])
-        result = pd.DataFrame()
-        extra = [c for c in df.columns
-                 if c not in self.config.detailed_mapping.minerals]
-        result[extra] = df[extra]
-        for reduced, basic in grouped:
-            result[reduced] = sum(
-                    df[b[2]]
-                    for b in basic.itertuples()
-                    if b[2] in df.columns)
-
+                result.append_image(Image.open(filepath))
         return result
 
     def percentages(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -125,9 +88,10 @@ class Steinbit:
             help='images or csv files to parse')
         args = parser.parse_args()
         steinbit = Steinbit(configfile=args.config)
-        result = steinbit.process_files(args.files)
-        if args.translate:
-            result = steinbit.translate(result)
+        frame = steinbit.process_files(args.files)
+        if args.translate or frame.requires_translation():
+            frame.apply_translation(steinbit.config.translation)
+        result = frame.result()
         if args.percent:
             result = steinbit.percentages(result)
         if args.output:

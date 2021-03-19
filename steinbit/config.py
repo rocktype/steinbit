@@ -50,6 +50,11 @@ class Config:
     def __init__(self, filename: Optional[str]):
         """
         Parse the config file supplied
+
+        Parameters
+        ----------
+        filename: Optional[str]
+            Construct from a configration filename instead of the default
         """
         filename = filename or self.search_config()
         config = configparser.ConfigParser()
@@ -67,7 +72,7 @@ class Config:
             os.path.join(MODULEPATH, 'data/translation.csv'))
         self.detailed_mapping = ColourMapping(pd.read_csv(detailed_mapping))
         self.reduced_mapping = ColourMapping(pd.read_csv(reduced_mapping))
-        self.translation = pd.read_csv(translation)
+        self.translation = pd.read_csv(translation).dropna()
 
         self.fields = {
                 k: Field(f, config['Regexes'].get(k, '(.*)'))

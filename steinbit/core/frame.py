@@ -18,6 +18,12 @@ class ColumnMismatchException(Exception):
     """
 
 
+class InvalidTranslationException(Exception):
+    """
+    Thrown if an invalid translation is supplied
+    """
+
+
 class Frame:
     """
     A frame holds a list of Pandas Dataframes and a
@@ -78,10 +84,15 @@ class Frame:
         index = self.__eindex_by_cols(row.columns, True)
         self.data[index] = self.data[index].append(row)
 
-    @staticmethod
-    def __min_error_index(counts: List[Tuple[float, Any]]):
-        "Return the index of the element with the minimum error"
-        errors = [c[0] for c in counts]
+    def __min_error_index(self, counts: List[Tuple[float, Any]]):
+        """
+        Return the index of the element with the minimum error
+        and the lowest number of minerals if two sets have the
+        same error.
+        """
+        errors = [
+            (c[0], len(self.extractors[i].minerals))
+            for i, c in enumerate(counts)]
         return errors.index(min(errors))
 
     def append_image(self, image_data: Image):
@@ -114,6 +125,8 @@ class Frame:
             each element in one extractor is injectively mapped to some
             element in the other.
         """
+        if len(translation.columns) != 2:
+            raise InvalidTranslationException()
         source_columns = translation[translation.columns[1]].tolist()
         source = self.__eindex_by_cols(source_columns, False)
         target_columns = translation[translation.columns[0]].tolist()

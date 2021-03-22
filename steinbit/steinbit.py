@@ -101,5 +101,10 @@ class Steinbit:
         return 0
 
 
-if __name__ == '__main__':
+def main():
+    "Main invocation"
     exit(Steinbit.run())
+
+
+if __name__ == '__main__':
+    main()

@@ -5,7 +5,7 @@ The traits module supplies type information for common
 types and formats
 """
 
-from typing import List, Tuple, Dict, Pattern, Optional
+from typing import List, Tuple, Dict, Pattern, Optional, Union
 import numpy as np
 import pandas as pd
 import re
@@ -83,7 +83,15 @@ class Field:
         self.exif = exif
         self.regex = re.compile(regex) if regex else re.compile('(.*)')
 
-    def extract(self, metadata: Dict[str, str]) -> Optional[str]:
+    @staticmethod
+    def __float_or_string(value: str) -> Union[str, float]:
+        "Attempt to coerce a string to an float"
+        try:
+            return float(value)
+        except ValueError:
+            return value
+
+    def extract(self, metadata: Dict[str, str]) -> Optional[Union[str, float]]:
         """
         Extract this field from the metadata
         """
@@ -92,4 +100,4 @@ class Field:
         match = self.regex.match(metadata[self.exif])
         if not match:
             return None
-        return match.group(1)
+        return Field.__float_or_string(match.group(1))

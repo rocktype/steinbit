@@ -4,7 +4,7 @@
 Image transformations and statistics
 """
 
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Union
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from .types import ColourMapping, Field
@@ -64,7 +64,7 @@ class ImageDataExtractor:
         error = np.sqrt(np.mean(np.square(distances.flatten())))
         return error, mapping
 
-    def metadata(self, image: Image) -> Dict[str, Optional[str]]:
+    def metadata(self, image: Image) -> Dict[str, Optional[Union[str, float]]]:
         """
         Extract the metadata from the image's exif data. Metadata is
         expected to be a ;-separated list of mappings, e.g.:
@@ -86,7 +86,7 @@ class ImageDataExtractor:
 
         Returns
         -------
-        Dict[str, str]
+        Dict[str, Optional[Any]]
             A dictionary of metadata items
         """
         if 'Description' not in image.info:

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-from .core import ImageDataExtractor, Frame
+from .core import (
+    ImageDataExtractor, Frame, ConsistencyException, RequiredFields
+)
 from .config import Config
 
 import argparse
@@ -9,6 +11,7 @@ import pandas as pd
 from PIL import Image
 from tqdm import tqdm
 import magic
+import lasio
 
 
 class Steinbit:
@@ -17,6 +20,21 @@ class Steinbit:
 
     def __init__(self, configfile: Optional[str] = None):
         self.config = Config(configfile)
+
+    @staticmethod
+    def append_file(filepath: str, result: Frame):
+        """
+        Append a single file to the frame
+        """
+        mime = magic.detect_from_filename(filepath).mime_type
+        if not mime.startswith('image'):
+            try:
+                lasfile = lasio.read(filepath)
+                result.append_frame(lasfile.df())
+            except KeyError:
+                result.append_frame(pd.read_csv(filepath))
+        else:
+            result.append_image(Image.open(filepath))
 
     def process_files(self, files: List[str]) -> pd.DataFrame:
         """
@@ -39,11 +57,11 @@ class Steinbit:
                 ImageDataExtractor(cfg.reduced_mapping, cfg.fields)
             ])
         for filepath in tqdm(files, desc="Processing files"):
-            mime = magic.detect_from_filename(filepath).mime_type
-            if not mime.startswith('image'):
-                result.append_frame(pd.read_csv(filepath))
-            else:
-                result.append_image(Image.open(filepath))
+            try:
+                Steinbit.append_file(filepath, result)
+            except ConsistencyException:
+                print("Consistency error processing: %s" % filepath)
+                raise
         return result
 
     def percentages(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -66,6 +84,34 @@ class Steinbit:
                 ).intersection(df.columns))
         df[cols] = df[cols].div(df[cols].sum(axis=1), axis=0).multiply(100)
         return df
+
+    @classmethod
+    def output_las(cls, frame: Frame, output: str):
+        """
+        Output a LAS file
+        """
+        df = frame.result()
+        unit = df[RequiredFields.D_UNIT.value][0]
+        depths = df[RequiredFields.DEPTH.value]
+        strt = depths.min()
+        stop = depths.max()
+        step = (stop - strt) / len(df.index)
+        las = lasio.LASFile()
+        las.well.STRT.unit = unit
+        las.well.STRT.value = strt
+        las.well.STOP.unit = unit
+        las.well.STOP.value = stop
+        las.well.STEP.unit = unit
+        las.well.STEP.value = step or 1.0
+        las.well.WELL.value = df[RequiredFields.WELL.value][0]
+
+        for column in [RequiredFields.DEPTH.value] + frame.minerals():
+            las.append_curve(
+                column.upper()[0:8],
+                depths,
+                descr=column)
+        with open(output, mode="w") as handle:
+            las.write(handle)
 
     @classmethod
     def run(cls):
@@ -95,7 +141,10 @@ class Steinbit:
         if args.percent:
             result = steinbit.percentages(result)
         if args.output:
-            result.to_csv(args.output, index=False)
+            if args.output.lower().endswith('las'):
+                cls.output_las(frame, args.output)
+            else:
+                result.to_csv(args.output, index=False)
         else:
             print(result)
         return 0

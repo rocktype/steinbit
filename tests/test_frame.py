@@ -2,7 +2,7 @@
 
 import unittest
 from steinbit.core import (
-        ImageDataExtractor, ColourMapping, Frame,
+        ImageDataExtractor, ColourMapping, Frame, Field,
         ColumnMismatchException, InvalidTranslationException)
 import pandas as pd
 import numpy as np
@@ -14,7 +14,15 @@ def make_image(pixels):
     image = Image.new('RGB', (len(pixels), 1))
     for index, colour in enumerate(pixels):
         image.putpixel((index, 0), ImageColor.getcolor(colour, 'RGB'))
+    image.info['Description'] = 'Wellbore:w;Depth:1m'
     return image
+
+
+FIELDS = {
+    'd_unit': Field('Depth', '[0-9\\.]*(.*)'),
+    'well': Field('Wellbore'),
+    'depth': Field('Depth', '([0-9\\.]*)')
+}
 
 
 DETAILED_IMAGE = make_image([
@@ -27,6 +35,9 @@ DETAILED_MAPPING = ColourMapping(pd.DataFrame({
 }))
 
 DETAILED_DF = pd.DataFrame({
+    'd_unit': ['m'],
+    'depth': [1],
+    'well': ['w'],
     'A0': [1],
     'A1': [1],
     'A2': [1],
@@ -44,6 +55,9 @@ REDUCED_MAPPING = ColourMapping(pd.DataFrame({
 }))
 
 REDUCED_DF = pd.DataFrame({
+    'd_unit': ['m'],
+    'depth': [1],
+    'well': ['w'],
     'A': [1],
     'B': [1]
 })
@@ -58,32 +72,32 @@ class FrameTest(unittest.TestCase):
 
     def test_frame_partitions_images(self):
         frame = Frame([
-            ImageDataExtractor(DETAILED_MAPPING),
-            ImageDataExtractor(REDUCED_MAPPING)])
+            ImageDataExtractor(DETAILED_MAPPING, FIELDS),
+            ImageDataExtractor(REDUCED_MAPPING, FIELDS)])
         frame.append_image(DETAILED_IMAGE)
         frame.append_image(REDUCED_IMAGE)
         self.assertTrue(frame.requires_translation())
 
     def test_frame_partitions_df(self):
         frame = Frame([
-            ImageDataExtractor(DETAILED_MAPPING),
-            ImageDataExtractor(REDUCED_MAPPING)])
+            ImageDataExtractor(DETAILED_MAPPING, FIELDS),
+            ImageDataExtractor(REDUCED_MAPPING, FIELDS)])
         frame.append_frame(REDUCED_DF)
         frame.append_frame(DETAILED_DF)
         self.assertTrue(frame.requires_translation())
 
     def test_frame_detects_bad_df(self):
         frame = Frame([
-            ImageDataExtractor(DETAILED_MAPPING),
-            ImageDataExtractor(REDUCED_MAPPING)])
+            ImageDataExtractor(DETAILED_MAPPING, FIELDS),
+            ImageDataExtractor(REDUCED_MAPPING, FIELDS)])
         with self.assertRaises(ColumnMismatchException):
             frame.append_frame(pd.DataFrame({
                 'No matching column': [1]}))
 
     def test_frame_translates(self):
         frame = Frame([
-            ImageDataExtractor(DETAILED_MAPPING),
-            ImageDataExtractor(REDUCED_MAPPING)])
+            ImageDataExtractor(DETAILED_MAPPING, FIELDS),
+            ImageDataExtractor(REDUCED_MAPPING, FIELDS)])
         frame.append_frame(REDUCED_DF)
         frame.append_frame(DETAILED_DF)
         self.assertTrue(frame.requires_translation())
@@ -92,17 +106,19 @@ class FrameTest(unittest.TestCase):
 
     def test_frame_translates_correctly(self):
         frame = Frame([
-            ImageDataExtractor(DETAILED_MAPPING),
-            ImageDataExtractor(REDUCED_MAPPING)])
+            ImageDataExtractor(DETAILED_MAPPING, FIELDS),
+            ImageDataExtractor(REDUCED_MAPPING, FIELDS)])
         frame.append_frame(REDUCED_DF)
         frame.append_frame(DETAILED_DF)
         frame.apply_translation(TRANSLATION)
-        assert_array_equal(frame.result().values, np.array([[1, 1], [3, 2]]))
+        assert_array_equal(
+            frame.result()[['A', 'B']].values,
+            np.array([[1, 1], [3, 2]]))
 
     def test_frame_requires_good_translation(self):
         frame = Frame([
-            ImageDataExtractor(DETAILED_MAPPING),
-            ImageDataExtractor(REDUCED_MAPPING)])
+            ImageDataExtractor(DETAILED_MAPPING, FIELDS),
+            ImageDataExtractor(REDUCED_MAPPING, FIELDS)])
         frame.append_frame(REDUCED_DF)
         frame.append_frame(DETAILED_DF)
         with self.assertRaises(InvalidTranslationException):

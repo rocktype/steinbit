@@ -8,6 +8,7 @@ from typing import List, Tuple, Any, Dict
 from PIL import Image
 from .imagedataextractor import ImageDataExtractor
 import pandas as pd
+from enum import Enum
 
 
 class ColumnMismatchException(Exception):
@@ -18,10 +19,30 @@ class ColumnMismatchException(Exception):
     """
 
 
+class ConsistencyException(Exception):
+    """
+    An exception thrown when the consistency of the
+    frame is violated
+    """
+
+
 class InvalidTranslationException(Exception):
     """
     Thrown if an invalid translation is supplied
     """
+
+
+class RequiredFields(Enum):
+    """
+    Fields that absolutely must be included in the configuration
+    """
+    D_UNIT = 'd_unit'
+    DEPTH = 'depth'
+    WELL = 'well'
+
+    def is_consistent(self):
+        "Return true if this field is consistent"
+        return self in [RequiredFields.D_UNIT, RequiredFields.WELL]
 
 
 class Frame:
@@ -60,17 +81,43 @@ class Frame:
         metadata: bool
             True, if we are also matching on the metadata
         """
-        cset = set(columns)
+        cset = set(c.lower() for c in columns)
         matches = []
+        unmatched = []
         for idx, extractor in enumerate(self.extractors):
-            eset = set(extractor.minerals)
+            eset = set(x.lower() for x in extractor.minerals)
             if metadata:
-                eset = eset.union(extractor.fields.keys())
+                eset = eset.union(x.lower() for x in extractor.fields.keys())
             if eset - cset == set():
                 matches.append((len(eset - cset), idx))
+            else:
+                unmatched.append((idx, next((eset - cset).__iter__())))
         if matches:
             return sorted(matches, key=lambda x: x[0])[0][1]
-        raise ColumnMismatchException()
+        raise ColumnMismatchException(
+            "Unmatched columns: {%s} not in [%s]" % (
+                ", ".join("%d: %s" % (i, v) for i, v in unmatched),
+                ", ".join(cset)))
+
+    def __check_frame(self):
+        """
+        Check consistency of frame
+        """
+        for column in RequiredFields.__members__.values():
+            for data in self.data:
+                if len(data.columns) == 0:
+                    continue
+                if column.value.lower() not in data.columns:
+                    raise ConsistencyException(
+                        "Required column %s is missing" % column.value)
+                if not column.is_consistent():
+                    continue
+                items = data[column.value.lower()].drop_duplicates()
+                if len(items) > 1:
+                    raise ConsistencyException(
+                        "%s is not consistent, values: [%s]" % (
+                            column.value,
+                            ", ".join(items.tolist())))
 
     def append_frame(self, row: pd.DataFrame):
         """
@@ -83,6 +130,7 @@ class Frame:
         """
         index = self.__eindex_by_cols(row.columns, True)
         self.data[index] = self.data[index].append(row)
+        self.__check_frame()
 
     def __min_error_index(self, counts: List[Tuple[float, Any]]):
         """
@@ -112,6 +160,7 @@ class Frame:
         row.update(results[index][1])
         row.update(fields)
         self.data[index] = self.data[index].append(row, ignore_index=True)
+        self.__check_frame()
 
     def apply_translation(self, translation: pd.DataFrame):
         """
@@ -162,3 +211,11 @@ class Frame:
         have been applied
         """
         return [x for x in self.data if len(x.index) > 0][0]
+
+    def minerals(self) -> List[str]:
+        """
+        Return the mineral list for the extractor in use
+        """
+        return [x.minerals
+                for x, d in zip(self.extractors, self.data)
+                if len(d.index) > 0][0]

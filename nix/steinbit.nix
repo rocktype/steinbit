@@ -9,6 +9,9 @@ let
   pytest-cov = callPackage ./pytest-cov.nix {
     pythonPackages = pythonPackages;
   };
+  lasio = callPackage ./lasio.nix {
+    pythonPackages = pythonPackages;
+  };
 in
 buildPythonPackage rec {
   pname = "steinbit";
@@ -23,6 +26,7 @@ buildPythonPackage rec {
   checkInputs = [ pytest pytest-cov flake8 mypy ];
   checkPhase = ''flake8 && mypy steinbit tests'';
   propagatedBuildInputs = [
+    lasio
     numpy
     pytest
     pandas

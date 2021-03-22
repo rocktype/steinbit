@@ -4,7 +4,7 @@
 The configuration file
 """
 
-from .core import ColourMapping, Field
+from .core import ColourMapping, Field, RequiredFields
 
 import os
 import configparser
@@ -75,8 +75,13 @@ class Config:
         self.translation = pd.read_csv(translation).dropna()
 
         self.fields = {
-                k: Field(f, config['Regexes'].get(k, '(.*)'))
+                k.lower(): Field(f, config['Regexes'].get(k, '(.*)'))
                 for k, f in config['Fields'].items()}
+
+        for field in RequiredFields.__members__.values():
+            if not field.value.lower() in self.fields:
+                raise ConfigException(
+                    "Required field '%s' is not specified" % field.value)
 
         trns = self.translation
         detailed_list = set(trns[trns.columns[1]])

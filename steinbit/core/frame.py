@@ -70,7 +70,7 @@ class Frame:
         self.extractors = extractors
         self.data = [pd.DataFrame() for _ in self.extractors]
 
-    def __eindex_by_cols(self, columns: List[str], metadata: bool):
+    def __eindex_by_cols(self, columns: List[str]):
         """
         Find an extractor by a list of columns
 
@@ -78,16 +78,12 @@ class Frame:
         ----------
         columns: List[str]
             The list of columns to match on
-        metadata: bool
-            True, if we are also matching on the metadata
         """
         cset = set(c.lower() for c in columns)
         matches = []
         unmatched = []
         for idx, extractor in enumerate(self.extractors):
             eset = set(x.lower() for x in extractor.minerals)
-            if metadata:
-                eset = eset.union(x.lower() for x in extractor.fields.keys())
             if eset - cset == set():
                 matches.append((len(eset - cset), idx))
             else:
@@ -128,7 +124,7 @@ class Frame:
         row: pd.DataFrame
             A data-frame to be appended
         """
-        index = self.__eindex_by_cols(row.columns, True)
+        index = self.__eindex_by_cols(row.columns)
         self.data[index] = self.data[index].append(row)
         self.__check_frame()
 
@@ -177,9 +173,9 @@ class Frame:
         if len(translation.columns) != 2:
             raise InvalidTranslationException()
         source_columns = translation[translation.columns[1]].tolist()
-        source = self.__eindex_by_cols(source_columns, False)
+        source = self.__eindex_by_cols(source_columns)
         target_columns = translation[translation.columns[0]].tolist()
-        target = self.__eindex_by_cols(target_columns, False)
+        target = self.__eindex_by_cols(target_columns)
 
         df = self.data[source]
         grouped = translation.groupby(by=translation.columns[0])

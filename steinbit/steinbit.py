@@ -4,6 +4,7 @@ from .config import Config
 from .create import SteinbitCreate
 from .compare import SteinbitCompare
 
+import traceback
 import argparse
 
 
@@ -24,8 +25,9 @@ def main() -> int:
     obj = args.clazz(Config(args.config))
     try:
         obj.run(args)
-    except Exception as exn:
-        print(exn)
+    except Exception:
+        traceback.print_exc()
+        return 1
     return 0
 
 

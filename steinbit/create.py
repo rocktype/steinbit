@@ -23,24 +23,35 @@ class SteinbitCreate:
         self.config = config
 
     @staticmethod
+    def read_las(filepath: str) -> pd.DataFrame:
+        """
+        Read a LAS file and apply adjustments to keep the
+        required fields
+        """
+        try:
+            lasfile = lasio.read(filepath)
+        except KeyError:
+            return None
+        frame = lasfile.df().reset_index().rename(
+            columns={x.mnemonic: x.descr for x in lasfile.curves})
+        headers = {
+                RequiredFields.D_UNIT.value: lasfile.well.STEP.unit,
+                RequiredFields.WELL.value: lasfile.well.WELL.value}
+        for field, header in headers.items():
+            frame[field] = [header for _ in frame.index]
+        return frame
+
+    @staticmethod
     def append_file(filepath: str, result: Frame):
         """
         Append a single file to the frame
         """
         mime = magic.detect_from_filename(filepath).mime_type
         if not mime.startswith('image'):
-            try:
-                lasfile = lasio.read(filepath)
-                frame = lasfile.df().reset_index().rename(
-                    columns={x.mnemonic: x.descr for x in lasfile.curves})
-                headers = {
-                        RequiredFields.D_UNIT.value: lasfile.well.STEP.unit,
-                        RequiredFields.WELL.value: lasfile.well.WELL.value}
-                for field, header in headers.items():
-                    frame[field] = [header for _ in frame.index]
-                result.append_frame(frame)
-            except KeyError:
-                result.append_frame(pd.read_csv(filepath))
+            frame = SteinbitCreate.read_las(filepath)
+            if not frame:
+                frame = pd.read_csv(filepath)
+            result.append_frame(frame)
         else:
             result.append_image(Image.open(filepath))
 

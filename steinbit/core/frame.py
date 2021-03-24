@@ -4,9 +4,10 @@
 Encapsulate frame types from sets of mappings
 """
 
-from typing import List, Tuple, Any, Dict
+from typing import List, Tuple, Any, Dict, Iterable, Optional
 from PIL import Image
 from .imagedataextractor import ImageDataExtractor
+import math
 import pandas as pd
 from enum import Enum
 
@@ -39,10 +40,18 @@ class RequiredFields(Enum):
     D_UNIT = 'd_unit'
     DEPTH = 'depth'
     WELL = 'well'
+    BACKGROUND = 'background'
 
     def is_consistent(self):
         "Return true if this field is consistent"
         return self in [RequiredFields.D_UNIT, RequiredFields.WELL]
+
+    def match_name(self, names: Iterable[str]) -> Optional[str]:
+        "Find a matching name from a list of names"
+        try:
+            return next(x for x in names if x.lower() == self.value.lower())
+        except StopIteration:
+            return None
 
 
 class Frame:
@@ -84,6 +93,7 @@ class Frame:
         unmatched = []
         for idx, extractor in enumerate(self.extractors):
             eset = set(x.lower() for x in extractor.minerals)
+            eset -= {RequiredFields.BACKGROUND.value}
             if eset - cset == set():
                 matches.append((len(eset - cset), idx))
             else:
@@ -103,17 +113,38 @@ class Frame:
             for data in self.data:
                 if len(data.columns) == 0:
                     continue
-                if column.value.lower() not in data.columns:
+                matched = column.match_name(data.columns)
+                if not matched:
                     raise ConsistencyException(
                         "Required column %s is missing" % column.value)
                 if not column.is_consistent():
                     continue
-                items = data[column.value.lower()].drop_duplicates()
+                items = data[matched].drop_duplicates()
                 if len(items) > 1:
                     raise ConsistencyException(
                         "%s is not consistent, values: [%s]" % (
                             column.value,
                             ", ".join(items.tolist())))
+
+    @staticmethod
+    def __sq_diff(value):
+        """
+        Guess a square difference from a sum to calculate background
+        """
+        if value < 100:
+            return 100.0 - value
+        side = int(math.sqrt(value) + 1)
+        return side * side
+
+    def add_background(self, row: pd.DataFrame, index: int):
+        """
+        Add in the missing background column
+        """
+        minerals = [
+            x for x in self.extractors[index].minerals
+            if x.lower() != RequiredFields.BACKGROUND.value]
+        background = row[minerals].sum(axis=1).map(Frame.__sq_diff)
+        row[RequiredFields.BACKGROUND.value] = background
 
     def append_frame(self, row: pd.DataFrame):
         """
@@ -125,6 +156,8 @@ class Frame:
             A data-frame to be appended
         """
         index = self.__eindex_by_cols(row.columns)
+        if RequiredFields.BACKGROUND.value not in row.columns:
+            self.add_background(row, index)
         self.data[index] = self.data[index].append(row)
         self.__check_frame()
 
@@ -155,6 +188,8 @@ class Frame:
         row: Dict[str, Any] = {}
         row.update(results[index][1])
         row.update(fields)
+        if RequiredFields.BACKGROUND.value not in row:
+            row[RequiredFields.BACKGROUND.value] = 0
         self.data[index] = self.data[index].append(row, ignore_index=True)
         self.__check_frame()
 

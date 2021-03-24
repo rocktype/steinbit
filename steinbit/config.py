@@ -78,8 +78,11 @@ class Config:
                 k.lower(): Field(f, config['Regexes'].get(k, '(.*)'))
                 for k, f in config['Fields'].items()}
 
+        minerals = set(self.detailed_mapping.minerals)
+        minerals = minerals.intersection(self.reduced_mapping.minerals)
+        fields = [x.lower() for x in minerals.union(self.fields.keys())]
         for field in RequiredFields.__members__.values():
-            if not field.value.lower() in self.fields:
+            if field.value.lower() not in fields:
                 raise ConfigException(
                     "Required field '%s' is not specified" % field.value)
 

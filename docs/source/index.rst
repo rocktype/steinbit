@@ -6,14 +6,19 @@
 Welcome to Steinbit's documentation!
 ====================================
 
+Contents
+--------
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
+   modules
 
+.. mdinclude:: ../../README.md
+   :start-line: 4
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`

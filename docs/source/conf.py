@@ -1,3 +1,7 @@
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../..'))
+
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -17,7 +21,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'Rocktype'
+project = 'Steinbit'
 copyright = '2021, Henrik Omma, James Reynolds'
 author = 'Henrik Omma, James Reynolds'
 
@@ -27,8 +31,7 @@ author = 'Henrik Omma, James Reynolds'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [
-]
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'm2r2']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

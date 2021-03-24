@@ -11,3 +11,4 @@ pandas
 pillow>=7.0.0
 tqdm
 scikit-learn
+m2r2

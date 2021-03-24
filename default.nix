@@ -9,12 +9,16 @@ let
   pytest-cov = callPackage ./nix/pytest-cov.nix {
     pythonPackages = pythonPackages;
   };
+  m2r2 = callPackage ./nix/m2r2.nix {
+    pythonPackages = pythonPackages;
+  };
 in
   mkShell {
     buildInputs = with pythonPackages; [
       steinbit 
       python 
       sphinx     ## Documentation
+      m2r2       ## ...conversion of README.md
       pytest     ## Testing
       pytest-cov ## Code coverage
       codecov    ## Code coverage upload

@@ -12,6 +12,9 @@ let
   lasio = callPackage ./lasio.nix {
     pythonPackages = pythonPackages;
   };
+  m2r2 = callPackage ./m2r2.nix {
+    pythonPackages = pythonPackages;
+  };
 in
 buildPythonPackage rec {
   pname = "steinbit";
@@ -22,10 +25,11 @@ buildPythonPackage rec {
     pytest
     mv htmlcov $out/htmlcov
   '';
-  nativeBuildInputs = [ sphinx ];
+  nativeBuildInputs = [ sphinx m2r2 ];
   checkInputs = [ pytest pytest-cov flake8 mypy ];
   checkPhase = ''flake8 && mypy steinbit tests'';
   propagatedBuildInputs = [
+    m2r2
     lasio
     numpy
     pytest

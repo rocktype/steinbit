@@ -49,7 +49,7 @@ class SteinbitCreate:
         mime = magic.detect_from_filename(filepath).mime_type
         if not mime.startswith('image'):
             frame = SteinbitCreate.read_las(filepath)
-            if not frame:
+            if frame is None:
                 frame = pd.read_csv(filepath)
             result.append_frame(frame)
         else:
@@ -143,7 +143,7 @@ class SteinbitCreate:
             help='Write percentages rather than raw pixel counts')
         parser.add_argument(
             'files', type=str, nargs='+',
-            help='images or csv files to parse')
+            help='images, csv or las files to parse')
         parser.set_defaults(clazz=cls)
 
     def run(self, args: Namespace):

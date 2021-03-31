@@ -39,6 +39,5 @@ buildPythonPackage rec {
     wheel
     pillow
     tqdm
-    magic
   ];
 }

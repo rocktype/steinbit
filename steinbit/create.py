@@ -11,7 +11,7 @@ from typing import Iterator
 import pandas as pd
 from PIL import Image
 from tqdm import tqdm
-import magic
+import mimetypes
 import lasio
 
 
@@ -46,8 +46,9 @@ class SteinbitCreate:
         """
         Append a single file to the frame
         """
-        mime = magic.detect_from_filename(filepath).mime_type
-        if not mime.startswith('image'):
+        mimetypes.init()
+        mime = mimetypes.guess_type(filepath)[0]
+        if mime and not mime.startswith('image'):
             frame = SteinbitCreate.read_las(filepath)
             if frame is None:
                 frame = pd.read_csv(filepath)

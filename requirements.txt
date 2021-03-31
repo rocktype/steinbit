@@ -12,5 +12,4 @@ pillow>=7.0.0
 tqdm
 scikit-learn
 m2r2
-python-magic
 lasio

@@ -7,6 +7,14 @@
 Installation, creation and comparison operations using the Steinbit tool
 proceed as follows:
 
+```diff
+-! Warning. The following will only work once the repo !-
+-! is public and the package is available on PYPI.     !-
+-!                                                     !-
+-! Use "Installing for development purposes" in the    !-
+-! interim.                                            !-
+```
+
 ```
 $ pip install steinbit
 $ steinbit create images/bls*.png -o sheet.csv
@@ -22,6 +30,17 @@ depth
 
 This constructs `sheet.csv` using the QEMSCAN image data files in the `images`
 and compares it against another sheet `original.las`.
+
+### Installing for development purposes
+
+To install the `main` branch from GitHub for development use `pip install -e`
+to create a link from the repository to the python installation.
+
+```
+$ git clone https://github.com/rocktype/steinbit
+$ pip install -e ./steinbit
+$ steinbit create ...
+```
 
 ## Introduction
 
